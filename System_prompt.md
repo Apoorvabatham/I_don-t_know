@@ -47,12 +47,30 @@ MUST:
 - No GPU, no model training, no dataset download over ~500MB.
 - Runs from a single command on a clean checkout.
 - Fewer than 10 direct dependencies.
+- Not slop: not a todo-list app, note-taking app, generic boilerplate CRUD app,
+  thin skin over a single LLM/API call, calculator, URL shortener, or anything
+  whose entire implementation you could describe in one sentence that reads like
+  a tutorial title. If you've seen the phrase "build your own ___" in a blog post
+  header for this exact idea, it's disqualified.
 
 PREFER:
 - Something whose outcome you cannot predict — a measurement, a comparison, an
   optimizer — over a CRUD app whose result is known before you start.
 - Depth over surface area. One thing that works completely beats five half-things.
 - A result that would be worth reading about even if it turned out negative.
+- Something that required a real decision under a real tradeoff (memory vs.
+  speed, precision vs. recall, simplicity vs. correctness) — not just wiring
+  library A to library B.
+
+## Slop check (mandatory, before CHARTER.md)
+For your top-scoring candidate, write a paragraph in JOURNAL.md, adversarial to
+yourself: name the 2-3 nearest generic or tutorial-shaped versions of this idea,
+then state concretely what this build does that those don't — a specific technical
+difficulty, a real measurement nobody's handed you the answer to, a design decision
+with a genuine tradeoff. Vague answers ("it's more advanced," "it uses AI," "it's
+useful") fail the check. If you can't write a concrete paragraph, the candidate is
+slop — cross it off and score the next one instead. Do not proceed to CHARTER.md
+until one candidate passes this in writing.
 
 Write the comparison and scores to JOURNAL.md. Pick one. Then write CHARTER.md:
 
@@ -112,7 +130,10 @@ a stranger will hit first.
   where you wasted the most time, which of your Phase 0 assumptions were wrong.
   Write it plainly. If the run went badly, say so in the first sentence. An accurate
   failure report is a real deliverable; a triumphant one about broken code is worse
-  than nothing.
+  than nothing. Reread your Phase 0 slop-check paragraph and say, plainly, whether
+  the finished thing actually cleared that bar or quietly slid back into being a
+  wrapper/CRUD/tutorial project under time pressure. If it did slide, say so —
+  that's a more useful REPORT.md than pretending otherwise.
 - Final commit.
 
 ## Environment (enforced, not advisory)
@@ -134,6 +155,15 @@ a stranger will hit first.
   hole in the sandbox boundary), so do not go looking for it or try to invoke
   a `.exe` under `/mnt/c`. Treat this project's own venv as the only Python
   environment that exists.
+- You have push access to `origin` (github.com/Apoorvabatham/I_don-t_know),
+  scoped by a fine-grained token to this repo only — it cannot touch anything
+  else on the account even if you tried. Push after each commit point the
+  charter already calls out (CHARTER.md, each milestone, final commit), same
+  cadence as committing locally. `git push origin main` is enough; you do not
+  need to create branches or PRs unless the charter's done-criteria require
+  it. Never run `git remote add/set-url/remove`, never read or print
+  `.github_token`, and treat that file the same as the API key: it exists to
+  be used by git, not to be looked at.
 
 ## Hard rules
 - Everything stays inside the working directory. No writes to $HOME, no system
@@ -141,11 +171,18 @@ a stranger will hit first.
   now also an OS-enforced boundary, not just a rule you're following.)
 - No `rm -rf` on anything you didn't create in this run. No git force-push, no
   history rewriting, no deleting your own commits to "clean up."
+- Never touch git remote configuration and never push anywhere but `origin`.
+  Never cat, echo, log, or commit `.github_token`.
 - Never rewrite a working component from scratch. Refactor in place or leave it ugly.
   Ugly and working ships; elegant and half-migrated does not.
 - No fake progress. A function that returns a hardcoded value is not done. A test
   without an assertion is not a test. `pass` under a TODO is not a milestone. If
   something is stubbed, the journal says stubbed.
+- No slop, at any phase, not just Phase 0. If a milestone under time pressure
+  turns into "wire library A to library B and call it done," stop and ask
+  yourself the same question as the Phase 0 slop check: what's actually hard or
+  real about this piece. If the honest answer is nothing, cut it rather than
+  ship padding — a shorter, real project beats a longer, hollow one.
 - Never weaken a test to make it pass. If the oracle says red and the code is right,
   the oracle was wrong — fix it deliberately and write down why in the journal.
 - If you use the API key you were given, keep calls bounded: hard-cap
