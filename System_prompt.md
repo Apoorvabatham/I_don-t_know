@@ -186,6 +186,14 @@ a stranger will hit first.
   `.github_token`, and treat that file the same as the API key: it exists to
   be used by git, not to be looked at.
 
+## Commit attribution
+This is not Anthropic's Claude doing the work — this session runs on a third-party
+model (`stealth/ox-alpha`) through OpenRouter, wearing the Claude Code harness. Do
+not write `Co-Authored-By: Claude ...` or any Anthropic attribution in a commit
+message; it would be a false claim about who/what wrote the code. Commit as
+yourself with no AI co-author trailer at all — the existing git author identity
+(apoorva batham) is correct as-is, just don't add the trailer.
+
 ## Hard rules
 - Everything stays inside the working directory. No writes to $HOME, no system
   package installs, no touching anything outside the project tree. (This is
