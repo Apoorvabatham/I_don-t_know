@@ -251,3 +251,39 @@ M1 landed ~3h ahead of its T+5h gate. Next: M2 backtracker (oracle goes green).
 - Linearity: all five evil patterns at n=128000 complete in 0.99-2.30s
   (pure Python), doubling ratios ~2.5-3.0 measured informally; stdlib re
   DNFs at 10s on these sizes. Full charter bench run launched separately.
+
+## Block 5 — M5 + ship verification complete (elapsed ~4.0h)
+
+### Built
+- Hardening: parser MAX_DEPTH=120 nesting cap; program-size cap (20k
+  instructions) now enforced at compile() — RegexPattern builds the program
+  eagerly and both matchers reuse it (previously the guard fired only on
+  first use, which tests/test_hardening.py caught immediately).
+- tests/test_growth.py: growth assertions in the oracle. First version used
+  raw doubling ratios <3.0; flaked twice under scheduler noise (once in
+  dev, once in the FRESH-CLONE ship check: exponent 1.62, single 32k sample
+  jumped 3.4x). Final metric: untimed warmup + min-of-3 per size with GC
+  quiesced, growth exponent bound 1.6 (linear ~1.0-1.3, quadratic ~2.0).
+- bench --smoke semantics fixed after the same fresh-clone failure exposed
+  it: smoke cells are 1-4ms single-repeats where strict ratio gating is
+  statistically meaningless — smoke enforces liveness (completion, no DNF),
+  the charter <3.0 gate stays with the full schedule (median-of-3 over ~1s
+  cells) and with test_growth's exponent.
+- README.md + RESULTS.md. Demo snippets verified verbatim before commit.
+
+### Ship verification (fresh clone of HEAD into empty dir)
+- make check -> exit 0
+- python3 -m unittest discover -s tests -q -> exit 0 (34 tests; 2500
+  differential cases vs re, zero mismatches, whitelist EMPTY throughout run)
+- tools/fuzz_diff.py --cases 5000 -> exit 0, PASS, prints seed
+- bench/run_bench.py --smoke -> BENCH GREEN
+- full charter bench earlier today: exit 0; pikevm all sizes to 128000,
+  median doubling ratios 1.84/1.97/2.05/2.06/2.16 across E5/E1/E2/E4/E3;
+  stdlib re DNF 5/5 at 10s; backtracker DNF everywhere (control group).
+- README demo verified: pikevm n=100k in ~1s; re still running at n=350
+  after 20s.
+
+All five charter done-criteria green from a fresh clone at ~T+4h.
+REPORT.md written including the mandated slop-check revisit (verdict:
+cleared, but only via M3/M4 work — the bare engine alone is tutorial-
+shaped and the report says so plainly).

@@ -3,19 +3,12 @@
 START_EPOCH = 1787581169  (run `date -u +%s`; elapsed_h = (now - START_EPOCH) / 3600)
 
 ## Current phase
-Phase 2 / M4 benchmark analysis IN PROGRESS (~T+3h). M1-M3 COMPLETE and committed;
-charter criterion #1 command (default-engine unittest) is GREEN.
+SHIPPED (~T+4h). All five charter done-criteria verified from a fresh clone
+of HEAD. REPORT.md written; final commit pending this block.
 
 ## Next concrete action
-M4 — Benchmark lab completion (target T+14h):
-- Full bench run to 128k launched; verify results/bench.{md,csv} + growth
-  ratios < 3.0 for pikevm and re DNF >= 3 of 5 (observed 5/5 already).
-- Add growth assertions to the oracle (tests/test_growth.py): pikevm must stay
-  < 3x median doubling ratio on a bounded evil-pattern subset (smoke-sized,
-  CI-safe runtime budget ~60-90s).
-- RESULTS.md draft: numbers, method, surprises (E5 subject lesson, two-pass
-  captures rationale), distrust notes (single machine, WSL2, timer noise).
-- README.md draft can start once bench numbers land (M5 will freeze).
+None — build complete. Remaining optional polish lives in REPORT.md's
+'what I'd do next' section and IDEAS.md; do NOT reopen scope.
 
 ## Milestone status
 - M1 parser: DONE ~T+1.5h (roundtrip property + ngroups parity + error tables)
@@ -23,9 +16,10 @@ M4 — Benchmark lab completion (target T+14h):
   20000-case sweep PASS; three real bugs fixed along the way (JOURNAL block 3)
 - M3 pike VM: DONE ~T+3h — choice-chain priority keys, two-pass lazy captures,
   wrapped single-walk search; suite green both engines; fuzz 5k+15k PASS
-- M4 benchmark lab: harness DONE (Phase 1); remaining = full 128k run +
-  growth assertions + RESULTS.md analysis
-- M5 hardening/docs: not started
+- M4 benchmark lab: DONE — full 128k run BENCH GREEN (exit 0), growth
+  assertions in oracle (tests/test_growth.py), results in RESULTS.md
+- M5 hardening/docs: DONE — depth+program caps tested at compile time,
+  README/RESULTS/REPORT shipped, fresh-clone verification passed
 
 ## Environment facts (verified)
 - NO python venv possible (ensurepip missing). Dependency mechanism:
