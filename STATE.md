@@ -3,23 +3,23 @@
 START_EPOCH = 1787581169  (run `date -u +%s`; elapsed_h = (now - START_EPOCH) / 3600)
 
 ## Current phase
-Phase 1 COMPLETE (~T+1.4h): oracle built, validated red-vs-stub AND self-validated,
-committed. Next: Phase 2 / M1 parser.
+Phase 2 / M2 backtracker IN PROGRESS (~T+2.0h). M1 parser COMPLETE (commit pending this block).
 
 ## Next concrete action
-M1 — Parser (target T+5h):
-- nanoregex/lexer.py + nanoregex/parser.py: recursive-descent parse of the full
-  documented charter subset (literals, `.`, classes with ranges/negation,
-  `\d\w\s\D\W\S` + literal escapes, `^ $\b\B`, `(...)`, `(?:...)`, `|`,
-  `* + ? {m} {m,n}` greedy+lazy) -> AST.
-- Precise errors on malformed patterns (position included). Out-of-subset syntax
-  (lookaround, backrefs, named groups, inline flags) -> UnsupportedPattern.
-- AST pretty-printer roundtrip property added to tests/ (parse(serialize(ast)) == ast).
-- Keep the oracle red only on missing MATCHERS: differential suite must stay
-  red-vs-stub until M2; do not let parser work touch tests/compare.py semantics.
+M2 — Backtracking matcher (target T+8h):
+- nanoregex/backtracker.py: recursive matcher over the AST with explicit
+  continuation/capture-slot discipline; greedy/lazy priority; anchors ^$\b\B;
+  leftmost-first search loop (try start at 0..len).
+- Match object: span(i)/group(i) semantics identical to re incl. group(0);
+  findall returns strings or tuples exactly like re (groups>1 -> tuple).
+- Wire RegexPattern.search/match/fullmatch/findall/finditer via NANOREGEX_ENGINE
+  selection; oracle must go GREEN for backtracker (NANOREGEX_ENGINE=backtracker
+  python3 -m unittest ...) and fuzz_diff --engine backtracker --cases 5000 exit 0.
+- Watch the known traps: $ matches before trailing \n; findall('') on nullable
+  patterns advances by one after zero-width match; (a*)* must terminate.
 
 ## Milestone status
-- M1 parser: IN PROGRESS (started ~T+1.4h)
+- M1 parser: DONE ~T+2.0h (roundtrip property + ngroups parity + error tables)
 - M2 backtracker: not started (oracle ready, drives it via NANOREGEX_ENGINE=backtracker)
 - M3 pike VM: not started (same oracle via NANOREGEX_ENGINE=pikevm)
 - M4 benchmark lab: harness DONE in Phase 1 (bench/run_bench.py + bench/evil.py);

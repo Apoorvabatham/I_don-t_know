@@ -1,38 +1,73 @@
 """Public API surface for nanoregex.
 
-All functions are stubs until their milestone lands:
-  - M1: parser (AST)          — internal, exercised via compile()
-  - M2: backtracking matcher  — search/match/fullmatch/findall/finditer
-  - M3: Thompson NFA + Pike VM — same surface, selected explicitly by tests/bench
-
-The stub raises NotImplementedError AT CALL TIME (not import time) so that the
-test suite imports cleanly and fails at runtime — the Phase 1 "red against
-stub" contract.
+Milestone status:
+  - M1 DONE: compile() parses into an AST (nanoregex.parser/printer).
+  - M2/M3 PENDING: search/match/fullmatch/findall/finditer raise
+    NotImplementedError at CALL time so the Phase-1 oracle stays RED
+    against this module until a real matcher lands behind them.
 """
 
+from nanoregex.errors import (
+    NanoregexError,
+    NanoregexParseError,
+    UnsupportedPattern,
+)
+from nanoregex.parser import parse
+from nanoregex.printer import print_pattern
 
-class UnsupportedPattern(Exception):
-    """Pattern uses syntax outside the documented subset.
+ENGINES = ("pikevm", "backtracker")
 
-    Deliberately distinct from error so the differential oracle can tell
-    'engine bug' from 'out of charter scope' — though within the subset the
-    oracle requires exact parity with re, so this must never fire on subset
-    patterns.
+
+class RegexPattern:
+    """Compiled pattern: AST + engine choice + group count.
+
+    Matching methods are stubs until M2 (backtracker) / M3 (Pike VM).
     """
 
+    def __init__(self, pattern, ast, ngroups, engine):
+        self.pattern = pattern
+        self.ast = ast
+        self.groups = ngroups
+        self.engine = engine
 
-def _stub(name):
-    def _raise(*args, **kwargs):
+    def pretty(self):
+        return print_pattern(self.ast)
+
+    def _stub(self, *args, **kwargs):
         raise NotImplementedError(
-            f"nanoregex.{name} is a Phase 1 stub — implemented in a later milestone"
-        )
+            f"nanoregex {self.engine} matching is not implemented yet "
+            f"(M2/M3); compile() works")
 
-    return _raise
+    search = _stub
+    match = _stub
+    fullmatch = _stub
+    findall = _stub
+    finditer = _stub
 
 
-compile = _stub("compile")
-search = _stub("search")
-match = _stub("match")
-fullmatch = _stub("fullmatch")
-findall = _stub("findall")
-finditer = _stub("finditer")
+def compile(pattern, engine="pikevm"):
+    if engine not in ENGINES:
+        raise ValueError(
+            f"unknown engine {engine!r}; choose from {ENGINES}")
+    ast, ngroups = parse(pattern)
+    return RegexPattern(pattern, ast, ngroups, engine)
+
+
+def search(pattern, string, engine="pikevm"):
+    return compile(pattern, engine).search(string)
+
+
+def match(pattern, string, engine="pikevm"):
+    return compile(pattern, engine).match(string)
+
+
+def fullmatch(pattern, string, engine="pikevm"):
+    return compile(pattern, engine).fullmatch(string)
+
+
+def findall(pattern, string, engine="pikevm"):
+    return compile(pattern, engine).findall(string)
+
+
+def finditer(pattern, string, engine="pikevm"):
+    return compile(pattern, engine).finditer(string)

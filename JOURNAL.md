@@ -134,3 +134,42 @@ fuzz_diff prints fresh seeds for reproducibility; evil subjects non-matchable
 by construction.
 
 Phase 1 done at ~1.4h elapsed, ahead of the T+3h gate. Next: M1 parser.
+
+## Block 2 — M1 parser complete (elapsed ~2.0h)
+
+### Built
+- nanoregex/errors.py: NanoregexParseError (malformed-in-subset; re.error parity
+  target) vs UnsupportedPattern (well-formed but charter-NOT-doing: lookaround,
+  backrefs, named groups, inline flags, \A\Z, octal/unicode escapes). Both carry pos.
+- nanoregex/lexer.py: tokens incl. fully-scanned classes (class syntax is its own
+  mini-grammar); malformed { bounds fall back to literal '{' per CPython.
+- nanoregex/parser.py: recursive descent; singleton Alt/Cat collapse so the printer
+  is an exact inverse; "multiple repeat" + "nothing to repeat" + min>max errors;
+  capture indices by open order.
+- nanoregex/printer.py: AST -> subset pattern; roundtrip contract.
+- nanoregex/api.py: compile() now real (AST + groups + engine choice); matchers
+  still NotImplementedError at call time — oracle stays red until M2.
+- tests/test_parser.py: roundtrip property over the whole 2500-case corpus,
+  ngroups parity vs re on 1000+ patterns, AST shape checks, malformed/unsupported
+  tables. gen_corpus EDGE_CASES extended with probed CPython quirks ([]] first-]
+  literal, a{2 literal-brace fallback, $ before trailing newline, empty branch,
+  {,3}, [\d], \t\n, \x41).
+
+### Probed CPython parity facts now encoded as permanent bedrock cases
+[]] = class of ']' ( [] unterminated); ] } lone = literals; a{2 / a{2, = literals;
+a{,3} == {0,3}; [\d-a] = bad-range error; $ matches before trailing \n;
+\0 = NUL; a** = multiple-repeat error.
+
+### Broke during the block (all mine, all in tests not engine)
+Wrote wrong expectations twice: forgot (?:...) parses to a Group node; put {2}
+in the accepted-quirks list though it IS rejected ("nothing to repeat"); left a
+stray valid literal 'A' in the unsupported table. Parser itself was right each
+time — tests fixed, no weakening of anything.
+
+### Evidence before commit
+23/24 suite green; single red = differential-vs-stub (by design).
+Extra one-off: printed patterns compiled under re with equal group counts AND
+equal search spans on 1200 corpus pairs (printer->re behavioral parity).
+fuzz_diff --seed 99 -> exit 2 RED intact after api rewrite.
+
+M1 landed ~3h ahead of its T+5h gate. Next: M2 backtracker (oracle goes green).

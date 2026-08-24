@@ -347,6 +347,22 @@ EDGE_CASES = [
     (r"[\\]", ["\\", "x"]),               # escaped backslash in class
     ("(a)|(b)", ["a", "b", "ab"]),
     (r"(?:\ba)\b", ["a b", "xab"]),
+    # --- probed CPython quirks (see JOURNAL block 2 / M1 probes) ---
+    ("a{2", ["aa{2"]),                    # malformed brace = literal brace
+    ("a{2,", ["xa{2,y"]),                 # ditto, open-ended form
+    ("}", ["x}y"]),                       # lone } literal
+    ("]", ["x]y"]),                       # lone ] literal
+    ("a{,3}", ["aaa", "aaaa"]),           # {,n} == {0,n}
+    ("[]]", ["]]", "x"]),                 # first ] in class is literal
+    ("[^]]", ["xyz"]),                    # negated variant of same
+    ("[-a]", ["-b", "xb"]),               # leading dash literal
+    ("[a-]", ["ba-", "x"]),               # trailing dash literal
+    (r"[\d]+", ["ab12de"]),               # shorthand inside class
+    (r"[^\d]+", ["12ab34"]),
+    (r"\t\n", ["\t\n", "\t"]),
+    (r"\x41+", ["xAAB"]),                 # hex escape
+    ("(|a)", ["b", "ab"]),                # empty alternation branch + findall('')
+    (r"a$", ["za\n", "za"]),              # $ matches before trailing newline
 ]
 
 
