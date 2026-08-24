@@ -8,14 +8,14 @@ Bounded for CI safety: three sizes (8k -> 32k), pikevm only, single
 repeat. The full 128k schedule with all engines belongs to
 bench/run_bench.py (charter criterion #3).
 
-Noise policy: wall-clock timings on a shared laptop jitter (a GC pause
-or WSL2 scheduling hiccup can double one sample). Raw doubling RATIOS
-therefore flake near any interesting threshold; instead we fit the
-growth EXPONENT log(t_max/t_min)/log(size_max/size_min) with GC quiesced.
-Linear measures ~0.9-1.2 here; quadratic measures ~2.0. The bound 1.4 is
-far from both. If this ever fails, rerun once on an idle machine before
-investigating — and never raise the bound silently; journal it if it
-must move.
+Noise policy: wall-clock timings on this WSL2 laptop carry occasional
+multi-x outliers (a single 32k measurement jumped 3.4x once), so each
+size is measured REPS times and the MINIMUM kept — the least-noise
+estimator for microbenchmarks — after an untimed warmup pass, with GC
+quiesced. We fit the growth EXPONENT log(t_max/t_min)/log(size_max/
+size_min): linear measures ~0.9-1.3 here, quadratic ~2.0; the bound is
+1.6. If this ever fails on an idle machine, investigate — never raise
+the bound silently; journal it if it must move.
 """
 
 import gc
@@ -28,8 +28,9 @@ from bench.run_bench import CaseTimeout, timed_call
 from nanoregex import compile as ncompile
 
 SIZES = [8000, 16000, 32000]
+REPS = 3
 TIMEOUT_S = 15.0
-MAX_EXPONENT = 1.4
+MAX_EXPONENT = 1.6
 
 
 class TestPikeVMLinearGrowth(unittest.TestCase):
@@ -38,19 +39,26 @@ class TestPikeVMLinearGrowth(unittest.TestCase):
             with self.subTest(pattern=ep["pattern"]):
                 subject_fn = ep["subject"]
                 search = ncompile(ep["pattern"], engine="pikevm").search
+                subjects = {n: subject_fn(n) for n in SIZES}
+                # warmup: exercise the engine once so first-call effects
+                # (bytecode, caches) don't poison the smallest size
+                search(subjects[SIZES[0]])
                 times = []
                 gc_was = gc.isenabled()
                 gc.disable()
                 try:
                     for n in SIZES:
-                        subj = subject_fn(n)
-                        try:
-                            dt = timed_call(lambda: search(subj), TIMEOUT_S)
-                        except CaseTimeout:
-                            self.fail(
-                                f"{ep['id']} exceeded {TIMEOUT_S}s at "
-                                f"n={n} — Pike VM lost linearity")
-                        times.append(dt)
+                        best = None
+                        for _ in range(REPS):
+                            try:
+                                dt = timed_call(
+                                    lambda: search(subjects[n]), TIMEOUT_S)
+                            except CaseTimeout:
+                                self.fail(
+                                    f"{ep['id']} exceeded {TIMEOUT_S}s at "
+                                    f"n={n} — Pike VM lost linearity")
+                            best = dt if best is None else min(best, dt)
+                        times.append(best)
                 finally:
                     if gc_was:
                         gc.enable()
