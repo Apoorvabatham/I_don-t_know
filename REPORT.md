@@ -92,6 +92,29 @@ If the run had stopped after M2, the slop verdict would have been guilty
 as charged. M3's semantics work and M4's measurement discipline are what
 make this a project instead of a tutorial.
 
+## Post-ship review (same day)
+
+An adversarial recheck after the initial ship found one real, user-visible
+bug and three blind spots:
+
+- **Unknown letter escapes diverged silently.** `\q`, `\z`, `\c`, … are
+  errors in CPython (`bad escape`) but nanoregex matched them as literal
+  characters — 32 silent divergences across a systematic probe of every
+  ASCII letter. Fixed; probe now reports zero. The instructive part: the
+  20k-case fuzz sweeps could never have caught this, because the corpus
+  generator never emitted letter-escapes either. A fuzzer's blind spots
+  cap what its clean bill of health is worth.
+- Three construct families were generator-blind: lazy counted repeats
+  (`a{2,3}?` — parity rested on a single hand-written case), shorthand
+  members inside classes (`[\da-c]`), and empty alternation branches.
+  All three are now generated; suite re-verified green on both engines
+  with the reshaped corpora, plus fresh 8k-case sweeps per engine.
+- An apparent 15x performance regression was bisected with interleaved
+  A/B runs against a clone of the pre-M5 commit: identical timings. The
+  slowdown was WSL2-wide CPU contention (a raw interpreter loop degraded
+  equally). No code change needed — and the noise-robust growth-exponent
+  oracle kept passing under exactly that load.
+
 ## What I'd do next
 
 - Bound the lazy-capture cost (one-pass/two-pass hybrid with a state cap).

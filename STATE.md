@@ -3,8 +3,10 @@
 START_EPOCH = 1787581169  (run `date -u +%s`; elapsed_h = (now - START_EPOCH) / 3600)
 
 ## Current phase
-SHIPPED (~T+4h). All five charter done-criteria verified from a fresh clone
-of HEAD. REPORT.md written; final commit pending this block.
+SHIPPED & CLOSED (~T+4.8h). All five charter done-criteria verified from a
+fresh clone of the FINAL HEAD (19674a7 + close-out commit). Post-ship
+review found+fixed the letter-escape divergence and closed fuzzer blind
+spots; see REPORT.md 'Post-ship review'.
 
 ## Next concrete action
 None — build complete. Remaining optional polish lives in REPORT.md's

@@ -324,3 +324,14 @@ of 581e789 (pre-M5): old and new IDENTICAL (~0.48s E1@32k each). Raw Python
 loop also ~3-4x slower machine-wide -> WSL2 CPU contention/throttling, not
 code. The exponent-based growth metric kept passing under this load, which
 is exactly why it was designed noise-robust. No action needed.
+
+## Block 7 — project close (elapsed ~4.8h)
+
+Finishing pass requested after the review:
+- nanoregex.__version__ bumped to 1.0.0; module docstring now describes the
+  shipped two-engine state instead of M1-era stub status.
+- README status section mentions the post-ship review (escape fix + fuzzer
+  blind spots); REPORT.md gained a "Post-ship review" section.
+- Final fresh-clone verification of the exact HEAD re-run (see evidence
+  below) so charter criterion #5 holds for the shipped commit, not an
+  earlier one.

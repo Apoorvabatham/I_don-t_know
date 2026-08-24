@@ -108,8 +108,11 @@ unmatched groups report `(-1, -1)` spans.
 ## Status / honest notes
 
 Built in one autonomous 24-hour session; milestones M1–M5 all green at
-~T+4h of wall time. See REPORT.md for the close-out (what shipped, what
-was cut, where time went). Known sharp edges are listed above rather than
-hidden: if you find a pattern in the documented subset where nanoregex
-disagrees with CPython `re`, that is a bug — the whitelist policy in
-`tests/compare.py` is empty by design.
+~T+4h, followed by an adversarial recheck that found and fixed one real
+divergence (unknown letter escapes like `\q` were silently treated as
+literals; they now raise, matching CPython) and closed three fuzzer blind
+spots. See REPORT.md for the close-out (what shipped, what was cut, where
+time went) and JOURNAL.md for the full decision log. Known sharp edges are
+listed above rather than hidden: if you find a pattern in the documented
+subset where nanoregex disagrees with CPython `re`, that is a bug — the
+whitelist policy in `tests/compare.py` is empty by design.

@@ -4,9 +4,12 @@ Public API intentionally mirrors the small slice of ``re`` that the charter's
 differential oracle exercises: compile / search / match / fullmatch /
 findall / finditer over the documented syntax subset (see CHARTER.md).
 
-STATUS: M1 parser complete — compile() parses and validates patterns.
-Matching (search/match/...) raises NotImplementedError until M2/M3 land;
-the Phase-1 oracle is red against those stubs by design.
+Two engines ship behind one interface:
+  * pikevm (default)  — breadth-first Thompson/Pike simulation, linear time
+  * backtracker       — iterative choice-point VM, exponential by design
+
+Both are differential-tested against CPython ``re`` (exact spans incl.
+capture groups) over thousands of seeded cases per release.
 """
 
 from nanoregex.api import (
@@ -38,4 +41,5 @@ __all__ = [
     "NanoregexParseError",
     "UnsupportedPattern",
 ]
-__version__ = "0.1.0+m1.parser"
+__version__ = "1.0.0"
+
