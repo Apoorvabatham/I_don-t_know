@@ -17,38 +17,53 @@ Semantics reproduced (differential-oracle-enforced):
   * zero-width star iterations terminate via the program's loopchk guard.
 """
 
-from nanoregex.compiler import compile_ast, cls_char_matches, short_matches
+from nanoregex.compiler import (
+    compile_ast, wrap_for_search, cls_char_matches, short_matches,
+)
 
 _WORD = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_")
 
 
 class Match:
-    __slots__ = ("_subject", "_spans")
+    """Match result. Group 0 spans are always present; groups >= 1 may be
+    resolved lazily by the Pike VM's second pass (resolver callable) so
+    that capture-free queries never pay for capture tracking."""
 
-    def __init__(self, subject, spans):
+    __slots__ = ("_subject", "_spans", "_resolver")
+
+    def __init__(self, subject, spans, resolver=None):
         self._subject = subject
-        self._spans = spans          # list of (start, end), slot 0 = overall
+        self._spans = list(spans)    # list of (start, end); slot 0 = overall
+        self._resolver = resolver
+
+    def _ensure_resolved(self):
+        if self._resolver is not None:
+            self._spans = self._resolver()
+            self._resolver = None
 
     @property
     def re_groups(self):
+        self._ensure_resolved()
         return len(self._spans) - 1
 
     def span(self, group=0):
+        if group >= len(self._spans):
+            self._ensure_resolved()
         return self._spans[group]
 
     def group(self, group=0):
-        s, e = self._spans[group]
+        s, e = self.span(group)
         return None if s < 0 else self._subject[s:e]
 
     def start(self, group=0):
-        return self._spans[group][0]
+        return self.span(group)[0]
 
     def end(self, group=0):
-        return self._spans[group][1]
+        return self.span(group)[1]
 
     def __repr__(self):
-        return f"<nanoregex.Match span={tuple(self._spans)}>"
+        return f"<nanoregex.Match span={self.span(0)}>"
 
 
 def _at_word_boundary(s, pos):
@@ -103,6 +118,11 @@ class _VM:
                     pos += 1
                     pc += 1
                     ok = True
+            elif tag == "anyraw":
+                if pos < n:
+                    pos += 1
+                    pc += 1
+                    ok = True
             elif tag == "cls":
                 if pos < n and cls_char_matches(op[2], s[pos]) != op[1]:
                     pos += 1
@@ -117,7 +137,7 @@ class _VM:
                 caps[op[1]] = pos
                 pc += 1
                 ok = True
-            elif tag == "split":
+            elif tag == "split" or tag == "scan":
                 stack.append((op[2], pos, tuple(caps), tuple(regs)))
                 pc = op[1]
                 ok = True
@@ -175,18 +195,19 @@ class BacktrackMatcher:
     def __init__(self, pattern_obj):
         self.pattern = pattern_obj.pattern
         self.prog = compile_ast(pattern_obj.ast, pattern_obj.groups)
+        self.prog_scan = wrap_for_search(self.prog)
 
     # -- single-position attempts -----------------------------------------
 
-    def _attempt(self, s, start, require_end=False, forbid_empty=False):
-        return _VM(self.prog, s, require_end, forbid_empty).run(start)
+    def _attempt(self, s, start, require_end=False, forbid_empty=False,
+                 scan=False):
+        prog = self.prog_scan if scan else self.prog
+        return _VM(prog, s, require_end, forbid_empty).run(start)
 
     def search(self, s, pos=0):
-        for start in range(pos, len(s) + 1):
-            m = self._attempt(s, start)
-            if m is not None:
-                return m
-        return None
+        # one walk of the lazy-any-char-wrapped program tries candidate
+        # starts left-to-right; identical results to per-offset re-runs
+        return self._attempt(s, pos, scan=True)
 
     def match(self, s, pos=0):
         return self._attempt(s, pos)

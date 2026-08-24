@@ -3,31 +3,26 @@
 START_EPOCH = 1787581169  (run `date -u +%s`; elapsed_h = (now - START_EPOCH) / 3600)
 
 ## Current phase
-Phase 2 / M3 Pike VM IN PROGRESS (~T+1.9h). M1+M2 COMPLETE and committed.
+Phase 2 / M4 benchmark analysis IN PROGRESS (~T+3h). M1-M3 COMPLETE and committed;
+charter criterion #1 command (default-engine unittest) is GREEN.
 
 ## Next concrete action
-M3 — Thompson NFA + Pike VM (target T+11h):
-- nanoregex/pikevm.py: breadth-first simulation of the SAME compiled program
-  (compiler.py is engine-neutral already): list-of-live-threads by pc,
-  epsilon-closure via save-instruction threading, capture slots carried per
-  thread with leftmost-FIRST priority preserved.
-  KEY subtlety (RE2-style): in a BFS VM, 'first to reach match wins' gives
-  LEFTMOST-LONGEST, but re is LEFTMOST-FIRST — thread spawn order from split
-  must encode priority, and a matched thread only kills threads that started
-  LATER at the same position; earlier-priority threads still win.
-  Approach: process one input position per step set; maintain capture arrays
-  per thread copied on enqueue; on match, record result but keep draining
-  lower-priority threads only until their priority index exceeds the winner's.
-- Same public API through RegexPattern (engine='pikevm' default).
-- Oracle green for DEFAULT engine: python3 -m unittest discover -s tests -q -> OK
-  (this unlocks charter criterion #1 verbatim); fuzz_diff --cases 5000 exit 0.
-- Then bench smoke shows pikevm column real; expect linear growth, BENCH GREEN.
+M4 — Benchmark lab completion (target T+14h):
+- Full bench run to 128k launched; verify results/bench.{md,csv} + growth
+  ratios < 3.0 for pikevm and re DNF >= 3 of 5 (observed 5/5 already).
+- Add growth assertions to the oracle (tests/test_growth.py): pikevm must stay
+  < 3x median doubling ratio on a bounded evil-pattern subset (smoke-sized,
+  CI-safe runtime budget ~60-90s).
+- RESULTS.md draft: numbers, method, surprises (E5 subject lesson, two-pass
+  captures rationale), distrust notes (single machine, WSL2, timer noise).
+- README.md draft can start once bench numbers land (M5 will freeze).
 
 ## Milestone status
 - M1 parser: DONE ~T+1.5h (roundtrip property + ngroups parity + error tables)
 - M2 backtracker: DONE ~T+1.9h — suite 24/24 + fuzz 5000 PASS + independent
   20000-case sweep PASS; three real bugs fixed along the way (JOURNAL block 3)
-- M3 pike VM: IN PROGRESS
+- M3 pike VM: DONE ~T+3h — choice-chain priority keys, two-pass lazy captures,
+  wrapped single-walk search; suite green both engines; fuzz 5k+15k PASS
 - M4 benchmark lab: harness DONE (Phase 1); remaining = full 128k run +
   growth assertions + RESULTS.md analysis
 - M5 hardening/docs: not started

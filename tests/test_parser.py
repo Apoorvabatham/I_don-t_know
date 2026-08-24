@@ -178,10 +178,13 @@ class TestCompileSurface(unittest.TestCase):
         with self.assertRaises(ValueError):
             ncompile("a", engine="turbo")
 
-    def test_matching_still_stubbed_until_m2(self):
-        pat = ncompile("a")
-        with self.assertRaises(NotImplementedError):
-            pat.search("aaa")
+    def test_both_engines_match(self):
+        # retired the Phase-1 'matching still stubbed' assertion: M2/M3
+        # replaced the stubs, so the contract is now that BOTH engines
+        # answer through the same compile() surface.
+        for eng in ("pikevm", "backtracker"):
+            m = ncompile("a", engine=eng).search("bab")
+            self.assertEqual(m.span(), (1, 2), eng)
 
 
 if __name__ == "__main__":

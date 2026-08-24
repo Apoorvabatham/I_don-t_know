@@ -37,9 +37,8 @@ class RegexPattern:
                 from nanoregex.backtracker import bind
                 self._matcher = bind(self)
             elif self.engine == "pikevm":
-                raise NotImplementedError(
-                    "nanoregex pikevm lands in milestone M3; use "
-                    "engine='backtracker'")
+                from nanoregex.pikevm import bind
+                self._matcher = bind(self)
             else:
                 raise ValueError(f"unknown engine {self.engine!r}")
         return self._matcher

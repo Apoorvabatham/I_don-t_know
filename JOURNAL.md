@@ -211,3 +211,43 @@ M1 landed ~3h ahead of its T+5h gate. Next: M2 backtracker (oracle goes green).
 - Independent sweep: --cases 20000 --seed 777777 -> PASS 20000/20000.
 - bench smoke: re DNF 5/5 evil patterns; backtracker column measures real DNFs;
   pikevm correctly red until M3. Fixed make_matcher stub-probe (call-time raise).
+
+## Block 4 — M3 Pike VM complete (elapsed ~3.1h at block start; suite green both engines)
+
+### Built
+- nanoregex/pikevm.py: breadth-first thread simulation over the shared program.
+  The hard part was not speed — it was EXACT CPython leftmost-first capture
+  semantics in a BFS machine. Four design iterations, each forced by the oracle:
+  v2 global rank counters broke priority inheritance ((?:aa|a) on 'aa' gave
+  (0,1) not (0,2)); v3 per-pc dedup merged capture-distinct histories
+  ((a*)* gave g1=(0,3) not (3,3)); v5-without-loopchk-bits erased the
+  continue-vs-exit decision. Final design: threads carry immutable
+  parent-linked CHOICE CHAINS (split arms append bits; loopchk contributes
+  continue=0/exit=1); match events compare chains lexicographically — exact
+  leftmost-first order, no heuristics. Dedup key (pc,caps,bits).
+- Two-pass captures: span pass ignores saves entirely (key (pc,bits)) so
+  capture bookkeeping never feeds the state space — this is what keeps
+  (a+)+ linear where naive caps-tracking explodes combinatorially. Groups >=1
+  resolve lazily on first .span(i>0)/.group(i>0) access via a full-fidelity
+  second pass; queries that never touch groups (the whole benchmark lab)
+  never pay.
+- Unanchored search via compiler.wrap_for_search: implicit lazy any-char
+  prologue ('scan' opcode) tries candidate starts left-to-right in ONE walk
+  — replaces O(n^2) per-offset re-runs. Span-mode recovers the true match
+  start by replaying the winner's choice chain (deterministic, O(n)).
+- backtracker.py switched to the same wrapped scan for search() (identical
+  semantics, one walk); Match gained lazy-resolver support (backtracker
+  passes eager spans, resolver=None).
+
+### Bugs caught by own tests during the block
+- forgot wrap_for_search import in backtracker; dropped _chain_less helper in
+  a rewrite; prog.regs attribute missing on _Attempt (slots rename). All
+  mechanical, all caught instantly by the suite.
+
+### Evidence before commit
+- Suite 24/24 OK with DEFAULT pikevm AND NANOREGEX_ENGINE=backtracker.
+- fuzz --cases 5000 --seed 20260824 PASS (pikevm); --cases 15000 --seed 777
+  PASS (backtracker).
+- Linearity: all five evil patterns at n=128000 complete in 0.99-2.30s
+  (pure Python), doubling ratios ~2.5-3.0 measured informally; stdlib re
+  DNFs at 10s on these sizes. Full charter bench run launched separately.

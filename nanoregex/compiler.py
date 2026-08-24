@@ -220,3 +220,32 @@ class _Compiler:
 
 def compile_ast(ast, ngroups):
     return _Compiler(ast, ngroups).compile()
+
+
+def wrap_for_search(prog):
+    """Program for unanchored search: implicit lazy any-char loop.
+
+    Instruction 0 is a ('scan', x, y) branch behaving like split but
+    semantically meaning 'begin the match here' (x, preferred, bit 0) vs
+    'consume one char and reconsider' (y, bit 1) — ONE linear walk tries
+    candidate starts in increasing order (the leftmost rule) instead of
+    re-running the machine from every offset (O(n^2)). Span-only
+    execution recovers the chosen start by replaying the winner's choice
+    chain (see pikevm._replay_start); capture-mode passes simply record
+    slot 0 normally at the x branch.
+    """
+    shift = 3                       # prologue length
+    code = [("scan", 3, 1),
+            ("anyraw",),
+            ("jmp", 0)]
+    for ins in prog.code:
+        tag = ins[0]
+        if tag == "split":
+            code.append((tag, ins[1] + shift, ins[2] + shift))
+        elif tag == "jmp":
+            code.append((tag, ins[1] + shift))
+        elif tag == "loopchk":
+            code.append(("loopchk", ins[1], ins[2] + shift))
+        else:
+            code.append(ins)
+    return Program(code, prog.ngroups, prog.regs)
