@@ -55,3 +55,45 @@ actually buy, measured) has an answer I do not know in advance.
 Project name: **nanoregex** — clean-room engine + adversarial benchmark lab, zero dependencies.
 
 Phase 0 completed at ~0.4h elapsed. CHARTER.md written and committed; decision closed.
+
+## Block 0b — Retroactive-but-immediate slop check (elapsed 0.47h)
+
+The remote gained commit 836f020 mid-run: System_prompt.md now mandates a "slop check"
+BEFORE CHARTER.md. My CHARTER.md (cc8e130) predates that gate by ~10 minutes of wall
+clock. Applying the check now, in writing, against the chosen candidate — honestly,
+with authority to kill it.
+
+**Candidate under review: B (nanoregex).**
+
+Nearest generic/tutorial-shaped versions:
+1. "Build your own regex engine in Python" posts (dev.to/Medium genre): a ~200-line
+   recursive backtracker for `. * + [] |`, correctness claimed by three hand-picked examples.
+2. Russ Cox's "Regular Expression Matching Can Be Simple And Fast" (2007, C): the canonical
+   NFA-vs-backtracking article — thesis AND measurements already published.
+3. "Pike VM / RE2 explained" educational repos: Thompson construction diagrams plus a VM,
+   usually POSIX-leftmost-longest or no captures at all.
+
+What this build does that those don't — concretely:
+- **Exact-agreement constraint as the spec.** Tutorials stop at "it matches." Here two
+  independently-designed engines (recursive backtracker; breadth-first Pike VM with capture
+  slots) must agree EXACTLY with CPython's `re` on ≥7000 generated cases — including greedy/
+  lazy priority order AND group span tuples. Leftmost-first (Perl) priority semantics inside a
+  breadth-first thread simulation is a real, known-hard subtlety (RE2's capture-slot threading);
+  getting a backtracker and a VM to produce identical spans is the actual technical difficulty,
+  and it is programatically checkable rather than vibes-checkable.
+- **Measurements nobody has handed me:** growth-ratio curves and DNF crossover input sizes for
+  CPython's own `sre` on the five canonical evil patterns; pure-Python PikeVM throughput at
+  128 KB inputs; per-engine cost of lazy quantifiers and class-heavy patterns. Cox's numbers are
+  C from 2007; CPython-specific numbers are not in anything I can read from this sandbox.
+- **A design decision with a genuine tradeoff, made up front:** excluding backreferences and
+  lookaround (charter NOT-doing #1/#2) is not laziness — it is what makes a linear-time engine
+  semantically possible, and it trades feature completeness for analyzable performance. Every
+  tutorial version quietly makes the opposite trade without stating it.
+
+Verdict: **PASS — narrowly but honestly.** The engine alone would be tutorial-slop; the
+differential oracle + adversarial measurement lab is the part nobody's post contains. Risk
+noted for ship time: if M4's benchmark lab degenerates into "we ran five patterns once,"
+the project HAS slid into slop territory and REPORT.md must say so plainly (new prompt rule).
+
+Also adopted from the updated prompt: push to origin after each charter commit point;
+no-slop-at-any-phase rule; REPORT.md must revisit this paragraph.
