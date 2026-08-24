@@ -1,2 +1,6 @@
 .env
 .claude/settings.local.json
+pylibs/
+__pycache__/
+*.pyc
+results/
