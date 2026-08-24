@@ -154,6 +154,10 @@ def _read_escape(src, i, in_class):
         raise UnsupportedPattern(
             f"\\{c} absolute anchor is not in the documented subset "
             f"(use ^/$)", i)
+    if c.isascii() and c.isalpha():
+        # CPython parity: unknown escapes of ASCII letters are errors
+        # ("bad escape \q"), not silent literals
+        raise NanoregexParseError(f"bad escape \\{c} (unknown escape)", i)
     return "lit", c, i + 2
 
 

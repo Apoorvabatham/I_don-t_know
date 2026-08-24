@@ -287,3 +287,40 @@ All five charter done-criteria green from a fresh clone at ~T+4h.
 REPORT.md written including the mandated slop-check revisit (verdict:
 cleared, but only via M3/M4 work — the bare engine alone is tutorial-
 shaped and the report says so plainly).
+
+## Block 6 — post-ship adversarial recheck (elapsed ~4.6h)
+
+User asked to recheck and find bugs. Hunted with targeted hammers instead of
+re-running the same suite.
+
+### BUG FOUND AND FIXED (real, user-visible)
+Unknown escapes of ASCII letters (\q \z \c ... 33 letters probed): CPython
+raises re.error("bad escape"); nanoregex silently treated them as literal
+characters — 32 silent divergences on input users actually hit. Fixed in
+lexer._read_escape: unknown ASCII-letter escapes now raise
+NanoregexParseError like re; punctuation escapes stay literals (verified).
+Probe now reports 0 divergences.
+
+### COVERAGE GAPS FOUND IN THE FUZZER (fixed)
+- Lazy counted repeats (a{2,3}?) were NEVER generated — parity rested on
+  one hand-written case. quant_counted bucket now emits lazy 30% of the time.
+- Shorthand members inside classes ([\da-c] shapes) were never generated;
+  cls() items now include them + serializer support.
+- Empty alternation branches (a||b / x|) only existed in EDGE_CASES; alt
+  bucket inserts one 20% of the time.
+Corpus changed => all seeds' corpora changed; suite re-run green both engines,
+plus fresh 8k-case sweeps per engine (seeds 4711/90210) all PASS.
+
+### HAMMERS RUN (all clean)
+- exhaustive-ish lazy counted repeats: 1080 checks vs re fullmatch spans.
+- odd classes [\d][^\W]... x dash placements: 864 checks.
+- long-subject hammer: 1200 corpus patterns x subjects up to ~130 chars x
+  search/fullmatch/findall/finditer x both engines: 0 problems.
+
+### NON-BUG investigated: apparent 15x slowdown
+test_growth went from ~3s to ~30s and evil-pattern timings looked 10-15x
+worse than the morning bench. Bisected via interleaved A/B against a clone
+of 581e789 (pre-M5): old and new IDENTICAL (~0.48s E1@32k each). Raw Python
+loop also ~3-4x slower machine-wide -> WSL2 CPU contention/throttling, not
+code. The exponent-based growth metric kept passing under this load, which
+is exactly why it was designed noise-robust. No action needed.

@@ -87,6 +87,8 @@ def _serialize(node, out):
         for it in node.items:
             if it[0] == "ch":
                 out.append(_escape_class_char(it[1]))
+            elif it[0] == "short":
+                out.append("\\" + it[1])
             else:
                 out.append(_escape_class_char(it[1]) + "-" + _escape_class_char(it[2]))
         out.append("]")
@@ -191,10 +193,14 @@ class Gen:
     def cls(self):
         items = []
         for _ in range(self.rng.randint(1, 3)):
-            if self.rng.random() < 0.4:
+            r = self.rng.random()
+            if r < 0.35:
                 lo = self.rng.choice(CLASS_CHARS)
                 hi = chr(min(ord(lo) + self.rng.randint(0, 4), ord("~")))
                 items.append(("range", lo, hi))
+            elif r < 0.5:
+                # shorthand member inside a class: [\dab-c] shapes
+                items.append(("short", self.rng.choice("dwsDWS")))
             else:
                 items.append(("ch", self.rng.choice(CLASS_CHARS)))
         return Class(items, self.rng.random() < 0.3)
@@ -221,6 +227,8 @@ class Gen:
         if bucket == "alt":
             n = self.rng.randint(2, 3)
             branches = [self.seq(depth + 1, None, alphabet) for _ in range(n)]
+            if self.rng.random() < 0.2:
+                branches.insert(self.rng.randrange(len(branches) + 1), Cat([]))
             return Group(None, Alt(branches))
         if bucket in ("quant_greedy", "quant_lazy"):
             lazy = bucket == "quant_lazy"
@@ -231,7 +239,9 @@ class Gen:
             body = self.quantifiable(depth + 1, alphabet)
             lo = self.rng.randint(0, 3)
             hi = lo + self.rng.randint(0, 3) if self.rng.random() < 0.7 else None
-            return Rep(body, lo, hi, False)
+            # lazy counted repeats used to be generator-blind; parity for
+            # a{2,3}? rested on a single hand-written case until this
+            return Rep(body, lo, hi, self.rng.random() < 0.3)
         if bucket == "nullable_star":
             inner_bucket = self.rng.choice(["lit", "class", "group"])
             body = self.node(depth + 1, inner_bucket, alphabet)

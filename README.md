@@ -76,7 +76,9 @@ alternation `|`; greedy and lazy quantifiers `* + ? {m} {m,} {m,n}` and
 CPython-quirk parity is deliberate and tested: `$` matches just before a
 trailing newline; a `]` in first position inside a class is a literal;
 malformed braces fall back to literal `{` (`a{2` matches `"a{2"`); `\B`
-never matches an empty subject; unmatched groups report `(-1, -1)` spans.
+never matches an empty subject; unknown escapes of ASCII letters are
+rejected (`\q` raises, like CPython — only punctuation may be escaped);
+unmatched groups report `(-1, -1)` spans.
 
 ## What does NOT work (by design)
 
