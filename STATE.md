@@ -3,27 +3,33 @@
 START_EPOCH = 1787581169  (run `date -u +%s`; elapsed_h = (now - START_EPOCH) / 3600)
 
 ## Current phase
-Phase 2 / M2 backtracker IN PROGRESS (~T+2.0h). M1 parser COMPLETE (commit pending this block).
+Phase 2 / M3 Pike VM IN PROGRESS (~T+1.9h). M1+M2 COMPLETE and committed.
 
 ## Next concrete action
-M2 — Backtracking matcher (target T+8h):
-- nanoregex/backtracker.py: recursive matcher over the AST with explicit
-  continuation/capture-slot discipline; greedy/lazy priority; anchors ^$\b\B;
-  leftmost-first search loop (try start at 0..len).
-- Match object: span(i)/group(i) semantics identical to re incl. group(0);
-  findall returns strings or tuples exactly like re (groups>1 -> tuple).
-- Wire RegexPattern.search/match/fullmatch/findall/finditer via NANOREGEX_ENGINE
-  selection; oracle must go GREEN for backtracker (NANOREGEX_ENGINE=backtracker
-  python3 -m unittest ...) and fuzz_diff --engine backtracker --cases 5000 exit 0.
-- Watch the known traps: $ matches before trailing \n; findall('') on nullable
-  patterns advances by one after zero-width match; (a*)* must terminate.
+M3 — Thompson NFA + Pike VM (target T+11h):
+- nanoregex/pikevm.py: breadth-first simulation of the SAME compiled program
+  (compiler.py is engine-neutral already): list-of-live-threads by pc,
+  epsilon-closure via save-instruction threading, capture slots carried per
+  thread with leftmost-FIRST priority preserved.
+  KEY subtlety (RE2-style): in a BFS VM, 'first to reach match wins' gives
+  LEFTMOST-LONGEST, but re is LEFTMOST-FIRST — thread spawn order from split
+  must encode priority, and a matched thread only kills threads that started
+  LATER at the same position; earlier-priority threads still win.
+  Approach: process one input position per step set; maintain capture arrays
+  per thread copied on enqueue; on match, record result but keep draining
+  lower-priority threads only until their priority index exceeds the winner's.
+- Same public API through RegexPattern (engine='pikevm' default).
+- Oracle green for DEFAULT engine: python3 -m unittest discover -s tests -q -> OK
+  (this unlocks charter criterion #1 verbatim); fuzz_diff --cases 5000 exit 0.
+- Then bench smoke shows pikevm column real; expect linear growth, BENCH GREEN.
 
 ## Milestone status
-- M1 parser: DONE ~T+2.0h (roundtrip property + ngroups parity + error tables)
-- M2 backtracker: not started (oracle ready, drives it via NANOREGEX_ENGINE=backtracker)
-- M3 pike VM: not started (same oracle via NANOREGEX_ENGINE=pikevm)
-- M4 benchmark lab: harness DONE in Phase 1 (bench/run_bench.py + bench/evil.py);
-  remaining for M4 = growth assertions in oracle + full 128k run + results analysis
+- M1 parser: DONE ~T+1.5h (roundtrip property + ngroups parity + error tables)
+- M2 backtracker: DONE ~T+1.9h — suite 24/24 + fuzz 5000 PASS + independent
+  20000-case sweep PASS; three real bugs fixed along the way (JOURNAL block 3)
+- M3 pike VM: IN PROGRESS
+- M4 benchmark lab: harness DONE (Phase 1); remaining = full 128k run +
+  growth assertions + RESULTS.md analysis
 - M5 hardening/docs: not started
 
 ## Environment facts (verified)

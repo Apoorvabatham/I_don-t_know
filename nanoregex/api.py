@@ -2,9 +2,9 @@
 
 Milestone status:
   - M1 DONE: compile() parses into an AST (nanoregex.parser/printer).
-  - M2/M3 PENDING: search/match/fullmatch/findall/finditer raise
-    NotImplementedError at CALL time so the Phase-1 oracle stays RED
-    against this module until a real matcher lands behind them.
+  - M2 DONE: engine='backtracker' runs the full match API.
+  - M3 PENDING: engine='pikevm' raises NotImplementedError at CALL time so
+    the oracle stays red for that engine until the Pike VM lands.
 """
 
 from nanoregex.errors import (
@@ -19,33 +19,53 @@ ENGINES = ("pikevm", "backtracker")
 
 
 class RegexPattern:
-    """Compiled pattern: AST + engine choice + group count.
-
-    Matching methods are stubs until M2 (backtracker) / M3 (Pike VM).
-    """
+    """Compiled pattern: AST + program + engine choice + group count."""
 
     def __init__(self, pattern, ast, ngroups, engine):
         self.pattern = pattern
         self.ast = ast
         self.groups = ngroups
         self.engine = engine
+        self._matcher = None
 
     def pretty(self):
         return print_pattern(self.ast)
 
-    def _stub(self, *args, **kwargs):
-        raise NotImplementedError(
-            f"nanoregex {self.engine} matching is not implemented yet "
-            f"(M2/M3); compile() works")
+    def _matcher_for(self):
+        if self._matcher is None:
+            if self.engine == "backtracker":
+                from nanoregex.backtracker import bind
+                self._matcher = bind(self)
+            elif self.engine == "pikevm":
+                raise NotImplementedError(
+                    "nanoregex pikevm lands in milestone M3; use "
+                    "engine='backtracker'")
+            else:
+                raise ValueError(f"unknown engine {self.engine!r}")
+        return self._matcher
 
-    search = _stub
-    match = _stub
-    fullmatch = _stub
-    findall = _stub
-    finditer = _stub
+    def search(self, string):
+        return self._matcher_for().search(string)
+
+    def match(self, string):
+        return self._matcher_for().match(string)
+
+    def fullmatch(self, string):
+        return self._matcher_for().fullmatch(string)
+
+    def findall(self, string):
+        return self._matcher_for().findall(string)
+
+    def finditer(self, string):
+        return self._matcher_for().finditer(string)
 
 
 def compile(pattern, engine="pikevm"):
+    """Parse `pattern` and bind it to `engine`.
+
+    Raises NanoregexParseError / UnsupportedPattern at parse time; a
+    not-yet-implemented engine raises NotImplementedError on first USE.
+    """
     if engine not in ENGINES:
         raise ValueError(
             f"unknown engine {engine!r}; choose from {ENGINES}")

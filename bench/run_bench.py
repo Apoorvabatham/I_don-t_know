@@ -70,14 +70,19 @@ def timed_call(fn, seconds):
 
 
 def make_matcher(engine, pattern):
-    """Compile one pattern for one engine. Returns search callable or None."""
+    """Compile one pattern for one engine. Returns search callable or None.
+
+    None means 'unavailable': either an unimplemented engine (raises at
+    CALL time since M1, hence the probe) or an out-of-subset rejection.
+    """
     if engine == "re":
         return re_ref.compile(pattern).search
     import nanoregex
     try:
         pat = nanoregex.compile(pattern, engine=engine)
+        pat.search("x")            # probe: stub engines raise here
     except NotImplementedError:
-        return None            # stub: required-green cell -> bench stays red
+        return None
     except nanoregex.UnsupportedPattern as e:
         print(f"WARNING: {engine} rejects charter pattern {pattern!r}: {e}",
               file=sys.stderr)

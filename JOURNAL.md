@@ -173,3 +173,41 @@ equal search spans on 1200 corpus pairs (printer->re behavioral parity).
 fuzz_diff --seed 99 -> exit 2 RED intact after api rewrite.
 
 M1 landed ~3h ahead of its T+5h gate. Next: M2 backtracker (oracle goes green).
+
+## Block 3 — M2 backtracker complete (elapsed ~1.9h)
+
+### Built
+- nanoregex/compiler.py: AST -> linear instruction program (char/any/cls/short/
+  save/split/jmp/setp/loopchk/bol/eol/wordb/match), shared by future Pike VM.
+  Quantifiers expand to star + optional-chain; {m,n} unrolled with a documented
+  program-size cap. Zero-progress guard (setp/loopchk) makes (a*)* terminate.
+- nanoregex/backtracker.py: ITERATIVE backtracking VM (explicit choice-point
+  stack, no recursion) — recursion depth would have made the lab measure
+  RecursionError instead of exponential time. Match object with span/group;
+  search/match/fullmatch/findall/finditer wired through api.py by engine.
+
+### Three real bugs the oracle caught (in order)
+1. Compiler never emitted overall-match save slots 0/1 -> group(0)=(-1,-1),
+   and finditer's empty-match advance then rewound i to 0 forever (the hang).
+2. Alternation compilation pointed every split fallback at the CHAIN END,
+   skipping later branches ((a|b) could match 'a' or nothing) and looping
+   under quantifiers — (a|b)*c hung on 'abc'. Fix: fallback arms target the
+   NEXT alternative's entry; last split targets the last branch START.
+3. Progress registers were global across backtracks: a restored empty-branch
+   choice saw a STALE reg, loopchk misread it as progress, star re-entered
+   forever (18,750-deep stack at instrument cap on (?: |)*x). Fix: choice
+   points snapshot the FULL machine state (pc,pos,caps,regs).
+
+### CPython quirks probed and encoded
+- finditer scanner: an empty match is yielded, then the SAME position is
+  retried demanding non-empty (yielded too when found); failing that advance
+  one char. Constraint does NOT persist across positions (b?? on 'xb').
+- \B in 3.10 = pure \b-negation EXCEPT it never matches an empty subject.
+
+### Evidence before commit
+- Suite 24/24 OK in 0.76s under NANOREGEX_ENGINE=backtracker (2500 differential
+  cases, zero mismatches, zero whitelist entries).
+- Charter criterion #2 shape: fuzz_diff --cases 5000 --seed 20260824 -> PASS.
+- Independent sweep: --cases 20000 --seed 777777 -> PASS 20000/20000.
+- bench smoke: re DNF 5/5 evil patterns; backtracker column measures real DNFs;
+  pikevm correctly red until M3. Fixed make_matcher stub-probe (call-time raise).
