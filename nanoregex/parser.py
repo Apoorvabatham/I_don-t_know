@@ -32,12 +32,18 @@ from nanoregex.lexer import tokenize
 
 _QUANT_KINDS = ("STAR", "PLUS", "QMARK", "REPEAT")
 
+#: Maximum nesting depth (groups/alternations/repeats). Recursive-descent
+#: parsing and the matchers' split-arm walks both scale with nesting, so
+#: pathological inputs are rejected here instead of blowing the stack.
+MAX_DEPTH = 120
+
 
 class _Parser:
     def __init__(self, tokens):
         self.toks = tokens
         self.i = 0
         self.ngroups = 0
+        self.depth = 0
 
     def peek(self):
         return self.toks[self.i]
@@ -46,6 +52,12 @@ class _Parser:
         tok = self.toks[self.i]
         self.i += 1
         return tok
+
+    def _enter(self, pos):
+        self.depth += 1
+        if self.depth > MAX_DEPTH:
+            raise NanoregexParseError(
+                f"pattern nests more than {MAX_DEPTH} levels deep", pos)
 
     def parse_pattern(self):
         ast = self.parse_alt()
@@ -119,6 +131,7 @@ class _Parser:
             negated, items = tok.value
             return CharClass(negated, items)
         if kind == "LPAREN":
+            self._enter(tok.pos)
             capture = tok.value
             index = None
             if capture:
@@ -129,6 +142,7 @@ class _Parser:
             if closing.kind != "RPAREN":
                 raise NanoregexParseError(
                     "missing ), unterminated subpattern", tok.pos)
+            self.depth -= 1
             return Group(index, body)
         if kind == "RPAREN":
             raise NanoregexParseError("unbalanced parenthesis", tok.pos)

@@ -194,7 +194,7 @@ class BacktrackMatcher:
 
     def __init__(self, pattern_obj):
         self.pattern = pattern_obj.pattern
-        self.prog = compile_ast(pattern_obj.ast, pattern_obj.groups)
+        self.prog = pattern_obj.prog          # built eagerly by compile()
         self.prog_scan = wrap_for_search(self.prog)
 
     # -- single-position attempts -----------------------------------------

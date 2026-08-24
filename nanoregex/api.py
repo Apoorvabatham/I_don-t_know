@@ -14,18 +14,25 @@ from nanoregex.errors import (
 )
 from nanoregex.parser import parse
 from nanoregex.printer import print_pattern
+from nanoregex.compiler import compile_ast
 
 ENGINES = ("pikevm", "backtracker")
 
 
 class RegexPattern:
-    """Compiled pattern: AST + program + engine choice + group count."""
+    """Compiled pattern: AST + instruction program + engine + group count.
+
+    The program is built eagerly so degenerate patterns ({m,n} expansions
+    beyond the documented cap) fail at compile() with UnsupportedPattern
+    instead of exploding later on first use.
+    """
 
     def __init__(self, pattern, ast, ngroups, engine):
         self.pattern = pattern
         self.ast = ast
         self.groups = ngroups
         self.engine = engine
+        self.prog = compile_ast(ast, ngroups)
         self._matcher = None
 
     def pretty(self):
