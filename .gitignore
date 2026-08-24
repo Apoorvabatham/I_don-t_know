@@ -1,6 +1,21 @@
 .env
 .claude/settings.local.json
+.github_token
 pylibs/
 __pycache__/
 *.pyc
 results/
+
+# session-environment noise that lives in this directory but is not project content
+.claude/
+.idea
+.vscode
+.mcp.json
+.bashrc
+.bash_profile
+.zshrc
+.zprofile
+.profile
+.ripgreprc
+.gitconfig
+.gitmodules

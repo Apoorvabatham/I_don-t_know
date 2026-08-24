@@ -97,3 +97,40 @@ the project HAS slid into slop territory and REPORT.md must say so plainly (new 
 
 Also adopted from the updated prompt: push to origin after each charter commit point;
 no-slop-at-any-phase rule; REPORT.md must revisit this paragraph.
+
+## Block 1 — Phase 1 oracle complete (elapsed ~1.4h)
+
+Resumed from STATE.md's next action. Found partial Phase 1 work already on disk
+(nanoregex stub API, tests/gen_corpus.py, tests/compare.py, both test files) —
+reviewed line by line before building the missing pieces on top.
+
+### Built this block
+- tools/fuzz_diff.py: standalone sweep CLI (--cases/--seed/--engine/--timeout),
+  prints seed (fresh SystemRandom seed when not given — D3), exit 0/1/2/3 contract.
+- bench/evil.py + bench/run_bench.py: five charter evil patterns, doubling sizes
+  1000..128000, per-case SIGALRM timeout, median-of-repeats, consecutive-doubling
+  growth ratios, results/bench.{md,csv}. Charter verdict logic is programmatic:
+  pikevm must complete every size with median ratio <3.0; re/backtracker DNF is a
+  measured result, never a failure. --smoke bounds a run for make check.
+- Makefile: check (compileall + unittest + ~60s smoke), test, bench, fuzz, clean.
+
+### What broke (and was caught by the harness itself)
+E5 `^(a+)+$` vs bare "a"*n TRIVIALLY MATCHES in sre (~0ms): greedy arm eats
+everything and `$` is satisfied, so there is no failure to backtrack through.
+First smoke run reported growth ratio 0.53 on a "catastrophic" pattern — the lab
+refused to lie. Fix (D4): E5 subject = "a"*n + "b". After fix all 5/5 patterns
+DNF stdlib re at n<=4000 under a 2s budget. Lesson recorded: an evil-pattern
+subject must be non-matchable by construction or it measures nothing.
+
+### Validation evidence (before commit)
+- Suite: exactly one red = differential-vs-stub; 9/9 self-validation green.
+- Green path: aliased nanoregex.compile -> re, ran real pipeline, 2500/2500 PASS
+  across all 11 buckets — comparator plumbing has no false positives.
+- fuzz_diff vs stub: exit 2 RED as designed. make check: fails only at that red.
+
+### Decisions logged (see STATE.md D2-D4)
+Timeout code duplicated between compare.py and run_bench.py on purpose;
+fuzz_diff prints fresh seeds for reproducibility; evil subjects non-matchable
+by construction.
+
+Phase 1 done at ~1.4h elapsed, ahead of the T+3h gate. Next: M1 parser.
